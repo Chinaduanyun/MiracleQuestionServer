@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>编辑图片 - 图标画布台</title>
+    <style>
+        :root {
+            --bg: #f4efe4;
+            --panel: rgba(255, 250, 240, 0.84);
+            --line: rgba(94, 73, 42, 0.14);
+            --line-strong: rgba(94, 73, 42, 0.28);
+            --text: #2d2415;
+            --muted: #726146;
+            --accent: #b4542e;
+            --accent-strong: #7d2e12;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+            font-family: "Avenir Next", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(255, 255, 255, 0.7), transparent 26%),
+                radial-gradient(circle at bottom right, rgba(179, 97, 43, 0.18), transparent 22%),
+                linear-gradient(135deg, var(--bg), #eadfca 48%, #e9e4d5 100%);
+            color: var(--text);
+        }
+
+        .page {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 16px;
+            gap: 12px;
+        }
+
+        /* ---- Top toolbar ---- */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 18px;
+            background: linear-gradient(180deg, rgba(255, 248, 237, 0.95), rgba(248, 240, 226, 0.88));
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            backdrop-filter: blur(14px);
+            box-shadow: 0 8px 30px rgba(70, 48, 18, 0.1);
+            flex-shrink: 0;
+        }
+
+        .toolbar .back-btn {
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 12px;
+            padding: 8px 14px;
+            font-size: 13px;
+            cursor: pointer;
+            color: var(--text);
+            text-decoration: none;
+            font-family: inherit;
+        }
+
+        .toolbar .back-btn:hover {
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .toolbar .divider {
+            width: 1px;
+            height: 26px;
+            background: var(--line-strong);
+        }
+
+        .tool-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .tool-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.5);
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 140ms ease;
+        }
+
+        .tool-btn:hover {
+            background: rgba(255, 255, 255, 0.85);
+        }
+
+        .tool-btn.is-active {
+            border-color: var(--accent);
+            background: rgba(180, 84, 46, 0.1);
+        }
+
+        .color-input {
+            width: 38px;
+            height: 38px;
+            border: 2px solid var(--line);
+            border-radius: 12px;
+            padding: 2px;
+            cursor: pointer;
+            background: #fff;
+        }
+
+        .color-input::-webkit-color-swatch-wrapper {
+            padding: 2px;
+        }
+
+        .color-input::-webkit-color-swatch {
+            border: none;
+            border-radius: 6px;
+        }
+
+        .size-slider {
+            width: 80px;
+            accent-color: var(--accent);
+        }
+
+        .size-label {
+            font-size: 12px;
+            color: var(--muted);
+            min-width: 28px;
+        }
+
+        .toolbar-spacer {
+            flex: 1;
+        }
+
+        .prompt-input {
+            flex: 0 1 320px;
+            min-width: 120px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.72);
+            border-radius: 14px;
+            padding: 9px 14px;
+            font-size: 13px;
+            color: var(--text);
+            outline: none;
+            font-family: inherit;
+        }
+
+        .prompt-input:focus {
+            border-color: rgba(180, 84, 46, 0.5);
+            box-shadow: 0 0 0 3px rgba(180, 84, 46, 0.1);
+        }
+
+        .regenerate-btn {
+            border: none;
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            font-family: inherit;
+            transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+        }
+
+        .regenerate-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(180, 84, 46, 0.3);
+        }
+
+        .regenerate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* ---- Canvas area ---- */
+        .canvas-container {
+            flex: 1;
+            min-height: 0;
+            position: relative;
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            overflow: hidden;
+            background: #fdf8ed;
+            box-shadow: 0 12px 40px rgba(70, 48, 18, 0.1);
+        }
+
+        .canvas-container canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        #bgCanvas {
+            z-index: 1;
+        }
+
+        #drawCanvas {
+            z-index: 2;
+        }
+
+        /* ---- Loading overlay ---- */
+        .loading-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            z-index: 10;
+            background: rgba(253, 248, 237, 0.85);
+            backdrop-filter: blur(6px);
+            place-items: center;
+            border-radius: 20px;
+        }
+
+        .loading-overlay.is-visible {
+            display: grid;
+        }
+
+        .loading-content {
+            text-align: center;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--line);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-text {
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        /* ---- Result overlay ---- */
+        .result-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            z-index: 10;
+            background: rgba(253, 248, 237, 0.92);
+            backdrop-filter: blur(6px);
+            place-items: center;
+            border-radius: 20px;
+        }
+
+        .result-overlay.is-visible {
+            display: grid;
+        }
+
+        .result-box {
+            text-align: center;
+            max-width: 90%;
+            max-height: 90%;
+        }
+
+        .result-box img {
+            max-width: 100%;
+            max-height: 65vh;
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            box-shadow: 0 12px 30px rgba(70, 48, 18, 0.12);
+        }
+
+        .result-actions {
+            margin-top: 16px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .result-actions button {
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 12px;
+            padding: 9px 18px;
+            font-size: 13px;
+            cursor: pointer;
+            font-family: inherit;
+            color: var(--text);
+        }
+
+        .result-actions button:hover {
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .result-actions .use-btn {
+            border: none;
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            color: #fff;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+        <div class="toolbar">
+            <a href="/" class="back-btn">← 返回</a>
+            <div class="divider"></div>
+
+            <div class="tool-group">
+                <button class="tool-btn is-active" id="penTool" title="铅笔">✏️</button>
+                <button class="tool-btn" id="rectTool" title="方形框">⬜</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <input type="color" class="color-input" id="colorPicker" value="#e94560" title="选择颜色" />
+
+            <span class="size-label" id="sizeLabel">3px</span>
+            <input type="range" class="size-slider" id="sizeSlider" min="1" max="20" value="3" />
+
+            <div class="divider"></div>
+
+            <button class="tool-btn" id="undoBtn" title="撤销">↩️</button>
+            <button class="tool-btn" id="clearDrawBtn" title="清除标注">🗑️</button>
+
+            <div class="toolbar-spacer"></div>
+
+            <input type="text" class="prompt-input" id="modifyPrompt" placeholder="描述你想要的修改…" />
+            <button class="regenerate-btn" id="regenerateBtn">🔄 重新生成</button>
+        </div>
+
+        <div class="canvas-container" id="canvasContainer">
+            <canvas id="bgCanvas"></canvas>
+            <canvas id="drawCanvas"></canvas>
+
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="loading-content">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">AI 正在重新生成图片…</div>
+                </div>
+            </div>
+
+            <div class="result-overlay" id="resultOverlay">
+                <div class="result-box">
+                    <img id="resultImage" alt="重新生成的图片" />
+                    <div class="result-actions">
+                        <button id="discardResult">放弃</button>
+                        <button class="use-btn" id="useResult">使用此图片继续编辑</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ---- Elements ---- */
+        const bgCanvas = document.getElementById('bgCanvas');
+        const drawCanvas = document.getElementById('drawCanvas');
+        const bgCtx = bgCanvas.getContext('2d');
+        const drawCtx = drawCanvas.getContext('2d');
+        const container = document.getElementById('canvasContainer');
+        const penTool = document.getElementById('penTool');
+        const rectTool = document.getElementById('rectTool');
+        const colorPicker = document.getElementById('colorPicker');
+        const sizeSlider = document.getElementById('sizeSlider');
+        const sizeLabel = document.getElementById('sizeLabel');
+        const undoBtn = document.getElementById('undoBtn');
+        const clearDrawBtn = document.getElementById('clearDrawBtn');
+        const regenerateBtn = document.getElementById('regenerateBtn');
+        const modifyPrompt = document.getElementById('modifyPrompt');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const resultOverlay = document.getElementById('resultOverlay');
+        const resultImage = document.getElementById('resultImage');
+        const discardResultBtn = document.getElementById('discardResult');
+        const useResultBtn = document.getElementById('useResult');
+
+        /* ---- State ---- */
+        let currentTool = 'pen'; // 'pen' | 'rect'
+        let isDrawing = false;
+        let lastX = 0, lastY = 0;
+        let rectStartX = 0, rectStartY = 0;
+        let history = []; // saved ImageData snapshots
+        let bgImage = null;
+
+        /* ---- Canvas sizing ---- */
+        function resizeCanvases() {
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            const dpr = window.devicePixelRatio || 1;
+
+            // Save draw content
+            let drawData = null;
+            if (drawCanvas.width > 0 && drawCanvas.height > 0) {
+                drawData = drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height);
+            }
+
+            bgCanvas.width = w * dpr;
+            bgCanvas.height = h * dpr;
+            bgCanvas.style.width = w + 'px';
+            bgCanvas.style.height = h + 'px';
+            bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            drawCanvas.width = w * dpr;
+            drawCanvas.height = h * dpr;
+            drawCanvas.style.width = w + 'px';
+            drawCanvas.style.height = h + 'px';
+            drawCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            renderBg();
+
+            // Restore draw (best-effort, aspect may shift on resize)
+            if (drawData) {
+                drawCtx.putImageData(drawData, 0, 0);
+            }
+        }
+
+        function renderBg() {
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            bgCtx.fillStyle = '#fdf8ed';
+            bgCtx.fillRect(0, 0, w, h);
+            if (bgImage) {
+                const scale = Math.min(w / bgImage.width, h / bgImage.height);
+                const iw = bgImage.width * scale;
+                const ih = bgImage.height * scale;
+                const ix = (w - iw) / 2;
+                const iy = (h - ih) / 2;
+                bgCtx.drawImage(bgImage, ix, iy, iw, ih);
+            }
+        }
+
+        /* ---- Load initial image from sessionStorage ---- */
+        function loadInitialImage() {
+            const src = sessionStorage.getItem('modify_image');
+            if (!src) return;
+            const img = new Image();
+            img.onload = () => {
+                bgImage = img;
+                renderBg();
+                saveHistory();
+            };
+            img.src = src;
+        }
+
+        /* ---- Tool selection ---- */
+        penTool.addEventListener('click', () => {
+            currentTool = 'pen';
+            penTool.classList.add('is-active');
+            rectTool.classList.remove('is-active');
+            drawCanvas.style.cursor = 'crosshair';
+        });
+
+        rectTool.addEventListener('click', () => {
+            currentTool = 'rect';
+            rectTool.classList.add('is-active');
+            penTool.classList.remove('is-active');
+            drawCanvas.style.cursor = 'crosshair';
+        });
+
+        sizeSlider.addEventListener('input', () => {
+            sizeLabel.textContent = sizeSlider.value + 'px';
+        });
+
+        /* ---- History / Undo ---- */
+        function saveHistory() {
+            const dpr = window.devicePixelRatio || 1;
+            history.push(drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height));
+            if (history.length > 50) history.shift();
+        }
+
+        undoBtn.addEventListener('click', () => {
+            if (history.length > 1) {
+                history.pop();
+                drawCtx.putImageData(history[history.length - 1], 0, 0);
+            } else if (history.length === 1) {
+                history.pop();
+                drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+            }
+        });
+
+        clearDrawBtn.addEventListener('click', () => {
+            drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+            history = [];
+            saveHistory();
+        });
+
+        /* ---- Drawing: Pen ---- */
+        function getCanvasPos(e) {
+            const rect = drawCanvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+
+        drawCanvas.addEventListener('pointerdown', (e) => {
+            isDrawing = true;
+            const pos = getCanvasPos(e);
+            lastX = pos.x;
+            lastY = pos.y;
+
+            if (currentTool === 'rect') {
+                rectStartX = pos.x;
+                rectStartY = pos.y;
+                saveHistory(); // save state before rect drawing
+            }
+
+            drawCanvas.setPointerCapture(e.pointerId);
+        });
+
+        drawCanvas.addEventListener('pointermove', (e) => {
+            if (!isDrawing) return;
+            const pos = getCanvasPos(e);
+
+            if (currentTool === 'pen') {
+                drawCtx.strokeStyle = colorPicker.value;
+                drawCtx.lineWidth = parseInt(sizeSlider.value);
+                drawCtx.lineCap = 'round';
+                drawCtx.lineJoin = 'round';
+                drawCtx.beginPath();
+                drawCtx.moveTo(lastX, lastY);
+                drawCtx.lineTo(pos.x, pos.y);
+                drawCtx.stroke();
+                lastX = pos.x;
+                lastY = pos.y;
+            } else if (currentTool === 'rect') {
+                // Restore to last saved state and draw preview rect
+                if (history.length > 0) {
+                    drawCtx.putImageData(history[history.length - 1], 0, 0);
+                }
+                drawCtx.strokeStyle = colorPicker.value;
+                drawCtx.lineWidth = parseInt(sizeSlider.value);
+                drawCtx.lineJoin = 'miter';
+                const rx = Math.min(rectStartX, pos.x);
+                const ry = Math.min(rectStartY, pos.y);
+                const rw = Math.abs(pos.x - rectStartX);
+                const rh = Math.abs(pos.y - rectStartY);
+                drawCtx.strokeRect(rx, ry, rw, rh);
+            }
+        });
+
+        drawCanvas.addEventListener('pointerup', () => {
+            if (!isDrawing) return;
+            isDrawing = false;
+            saveHistory();
+        });
+
+        /* ---- Composite both canvases to one data URL ---- */
+        function compositeToDataUrl() {
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            const dpr = window.devicePixelRatio || 1;
+            const out = document.createElement('canvas');
+            out.width = w * dpr;
+            out.height = h * dpr;
+            const ctx = out.getContext('2d');
+            ctx.drawImage(bgCanvas, 0, 0);
+            ctx.drawImage(drawCanvas, 0, 0);
+            return out.toDataURL('image/png');
+        }
+
+        /* ---- Get stored keys ---- */
+        function getApiKey() { return localStorage.getItem('ark_api_key') || ''; }
+        function getSeed2Model() { return localStorage.getItem('seed2_model') || 'doubao-seed-2-0-pro-260215'; }
+
+        /* ---- Regeneration ---- */
+        let isRegenerating = false;
+
+        regenerateBtn.addEventListener('click', async () => {
+            if (isRegenerating) return;
+
+            const apiKey = getApiKey();
+            if (!apiKey) { alert('请先在主页设置 API Key'); return; }
+
+            isRegenerating = true;
+            regenerateBtn.disabled = true;
+            regenerateBtn.textContent = '⏳ 生成中…';
+            loadingOverlay.classList.add('is-visible');
+
+            try {
+                const imageDataUrl = compositeToDataUrl();
+                const prompt = modifyPrompt.value.trim();
+                const w = bgImage ? bgImage.naturalWidth : container.clientWidth;
+                const h = bgImage ? bgImage.naturalHeight : container.clientHeight;
+
+                const resp = await fetch('/api/modify-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: imageDataUrl, prompt, apiKey, width: w, height: h })
+                });
+                const data = await resp.json();
+
+                if (!resp.ok) throw new Error(data.message || '生成失败');
+
+                loadingOverlay.classList.remove('is-visible');
+
+                let imgSrc = null;
+                if (data.url) imgSrc = data.url;
+                else if (data.b64_json) imgSrc = 'data:image/png;base64,' + data.b64_json;
+
+                if (imgSrc) {
+                    resultImage.src = imgSrc;
+                    resultOverlay.classList.add('is-visible');
+                } else {
+                    alert('未能获取到生成的图片');
+                }
+            } catch (err) {
+                loadingOverlay.classList.remove('is-visible');
+                alert('生成失败：' + err.message);
+            } finally {
+                isRegenerating = false;
+                regenerateBtn.disabled = false;
+                regenerateBtn.textContent = '🔄 重新生成';
+            }
+        });
+
+        /* ---- Result overlay actions ---- */
+        discardResultBtn.addEventListener('click', () => {
+            resultOverlay.classList.remove('is-visible');
+        });
+
+        useResultBtn.addEventListener('click', () => {
+            resultOverlay.classList.remove('is-visible');
+            const img = new Image();
+            img.onload = () => {
+                bgImage = img;
+                renderBg();
+                // Clear drawings
+                drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+                history = [];
+                saveHistory();
+                // Also update sessionStorage
+                sessionStorage.setItem('modify_image', resultImage.src);
+            };
+            img.src = resultImage.src;
+        });
+
+        /* ---- Init ---- */
+        resizeCanvases();
+        loadInitialImage();
+        saveHistory();
+        window.addEventListener('resize', resizeCanvases);
+    </script>
+</body>
+
+</html>

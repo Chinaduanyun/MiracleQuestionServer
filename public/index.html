@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>图标画布台</title>
+    <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+    <div class="page-shell">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <p class="eyebrow">ICON STAGE</p>
+                <h1>图标搜索</h1>
+            </div>
+
+            <div class="search-box">
+                <input id="searchInput" type="search" placeholder="搜索图标，支持中文“孩子”或英文“star”" autocomplete="off" />
+            </div>
+
+            <div id="sourceHint" class="source-hint is-hidden"></div>
+
+            <div class="sidebar-meta">
+                <span id="categoryTitle">未选择分类</span>
+                <span id="iconCount">0 个图标</span>
+            </div>
+
+            <div id="iconGrid" class="icon-grid"></div>
+        </aside>
+
+        <main class="canvas-panel">
+            <div class="canvas-header">
+                <div>
+                    <p class="eyebrow">CANVAS</p>
+                    <h2>拖放画布</h2>
+                </div>
+                <div class="canvas-header-actions">
+                    <button id="importCanvasButton" class="ghost-button" type="button">📂 导入</button>
+                    <button id="exportCanvasButton" class="ghost-button" type="button">💾 导出</button>
+                    <input id="importFileInput" type="file" accept=".json" class="is-hidden" />
+                    <button id="settingsButton" class="ghost-button" type="button">⚙️ 设置</button>
+                    <input id="aiPromptInput" class="ai-prompt-input" type="text"
+                        placeholder="输入辅助描述文字，帮助 AI 理解画布内容…" />
+                    <button id="generateImageButton" class="accent-button" type="button">✨ 生成图像</button>
+                </div>
+            </div>
+
+            <div id="canvasToolbar" class="canvas-toolbar is-hidden">
+                <div class="tb-group">
+                    <span class="tb-label">层级</span>
+                    <button id="tbLayerBottom" class="tb-btn" type="button" title="置底">⇊</button>
+                    <button id="tbLayerDown" class="tb-btn" type="button" title="下移一层 (Alt+↓)">↓</button>
+                    <span id="tbLayer" class="tb-value">1 / 1</span>
+                    <button id="tbLayerUp" class="tb-btn" type="button" title="上移一层 (Alt+↑)">↑</button>
+                    <button id="tbLayerTop" class="tb-btn" type="button" title="置顶">⇈</button>
+                </div>
+            </div>
+
+            <div class="canvas-frame">
+                <div id="canvasHint" class="canvas-hint">
+                    <strong>把左侧图标拖到这里</strong>
+                    <span>支持继续拖动画布中的图标调整位置</span>
+                </div>
+                <div id="canvas" class="canvas" aria-label="图标画布"></div>
+            </div>
+        </main>
+    </div>
+
+    <template id="iconCardTemplate">
+        <button class="icon-card" type="button" draggable="true">
+            <span class="icon-card-media"><img alt="" /></span>
+            <span class="icon-card-label"></span>
+        </button>
+    </template>
+
+    <!-- API Key Modal -->
+    <div id="apiKeyModal" class="modal-overlay is-hidden">
+        <div class="modal-card">
+            <h3>设置火山引擎 API 配置</h3>
+            <p class="modal-desc">请输入你的火山方舟 (Ark) API Key 和 Seed 2.0 模型端点 ID。</p>
+            <label class="modal-label">API Key</label>
+            <input id="apiKeyInput" class="modal-input" type="password" placeholder="Bearer xxxxxxxxxx"
+                autocomplete="off" />
+            <label class="modal-label">Seed 2.0 模型</label>
+            <div class="model-select-row">
+                <span class="model-display-name">Doubao-Seed-2.0-pro</span>
+                <input id="seed2ModelInput" class="modal-input" type="text" placeholder="ep-xxxxxxxxxx-xxxxx 或模型名称"
+                    autocomplete="off" />
+            </div>
+            <div class="modal-actions">
+                <button id="apiKeyCancel" class="ghost-button" type="button">取消</button>
+                <button id="apiKeySave" class="accent-button" type="button">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generated Image Modal -->
+    <div id="resultModal" class="modal-overlay is-hidden">
+        <div class="modal-card modal-card--large">
+            <h3>AI 生成结果</h3>
+            <div id="resultContent" class="result-content"></div>
+            <div class="modal-actions">
+                <button id="resultConfirm" class="accent-button" type="button">✅ 确认</button>
+                <button id="resultClose" class="ghost-button" type="button">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/app.js" defer></script>
+</body>
+
+</html>
